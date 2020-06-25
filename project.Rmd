@@ -1,0 +1,78 @@
+---
+title: "Prediction Assignment Writeup"
+author: "Abhijeet Mohite"
+date: "25/06/2020"
+output: html_document
+---
+
+##Enviornment Setup
+
+```{r,echo=FALSE}
+library(caret)
+library(rpart)
+library(randomForest)
+library(e1071)
+library(gbm)
+set.seed(1234)
+
+# Set the URLs
+TrainDataURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+TestDataURL <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+# Download and clean the datasets
+TrainingData <- read.csv(url(TrainDataURL), na.strings=c("NA","#DIV/0!",""))
+TestingData <- read.csv(url(TestDataURL), na.strings=c("NA","#DIV/0!",""))
+
+# Check for the datasets dimemsions
+dim(TrainingData)
+dim(TestingData)
+# Delete columns with missing values
+TrainingData <-TrainingData[,colSums(is.na(TrainingData)) == 0]
+TestingData <-TestingData[,colSums(is.na(TestingData)) == 0]
+
+# Delete unused columns
+TrainingData <-TrainingData[,-c(1:7)]
+TestingData <-TestingData[,-c(1:7)]
+
+# Check for the datasets dimemsions
+dim(TrainingData)
+dim(TestingData)
+# Partitions training dataset
+PartData <- createDataPartition(TrainingData$classe, p=0.7, list=FALSE)
+TrainingSet <- TrainingData[PartData, ]
+TestingSet <- TrainingData[-PartData, ]
+dim(TrainingSet)
+dim(TestingSet)
+plot(TrainingSet$classe, col="black", main="Frequency of different levels", xlab="classe", ylab="Frequency")
+
+# Fitting model
+model1 <- randomForest(classe ~., data=TrainingSet, method="class")
+
+# Predicting
+prediction1 <- predict(model1, TestingSet, Type="class")
+
+# Testing
+confusionMatrix(prediction1, TestingSet$classe)
+# Fitting model
+fitControl <- trainControl(method="repeatedcv", number=5, repeats=1)
+model2 <- train(classe ~., data=TrainingSet, method="gbm", trControl=fitControl, verbose=FALSE)
+
+# Predicting
+prediction2 <- predict(model2, TestingSet)
+
+# Testing
+confusionMatrix(prediction2, TestingSet$classe)
+
+predictTest <- predict(model1, TestingData)
+predictTest
+
+pml_write_files = function(x){
+n = length(x)
+for(i in 1:n){
+filename = paste0("problem_id_",i,".txt")
+write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+}
+}
+pml_write_files(predictTest)
+```
+
